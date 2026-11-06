@@ -63,6 +63,7 @@ ApplicationWindow {
                         text: "Telemetry"
                         tabIndex: 2
                         currentIndex: stackLayout.currentIndex
+                        contentItem: telemetryView
                         holderItem: telemetryHolder
 
                         onSelected: (idx) => stackLayout.currentIndex = tabIndex

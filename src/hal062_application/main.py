@@ -5,11 +5,10 @@ from __future__ import annotations
 import signal
 import sys
 
+import inputs
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
-
-from hal062_application import inputs
 
 # To be used on the @QmlElement decorator
 QML_IMPORT_NAME = "io.qt.textproperties"
