@@ -70,6 +70,8 @@ class InputManager(QObject):
 
     @Slot(int, float)
     def handle_gamepad_axis(self, axis_id, value):
+        print(axis_id, value)
+
         if axis_id == 0:
             if abs(value) > 0.15:
                 self.gamepadSignal.emit("turn", value)
@@ -77,7 +79,10 @@ class InputManager(QObject):
                 self.gamepadSignal.emit("turn", 0)
 
         elif axis_id == 5:
-            self.gamepadSignal.emit("speed", value)
+            self.gamepadSignal.emit("speed", (value + 1) / 2)
+
+        elif axis_id == 2:
+            self.gamepadSignal.emit("speed", -(value + 1) / 2)
 
 
 class GamepadWorker(QThread):
@@ -98,6 +103,10 @@ class GamepadWorker(QThread):
             joystick.init()
 
         clock = pygame.time.Clock()
+        last_trigger_value = 0
+        LT_AXIS = 2
+        RT_AXIS = 5
+
         while self._running:
             for event in pygame.event.get():
                 if event.type == pygame.JOYDEVICEADDED and joystick is None:
@@ -106,6 +115,16 @@ class GamepadWorker(QThread):
                 elif event.type == pygame.JOYBUTTONDOWN:
                     self.button_pressed.emit(event.button)
                 elif event.type == pygame.JOYAXISMOTION:
+                    if event.axis in (LT_AXIS, RT_AXIS):
+                        if event.axis == RT_AXIS and last_trigger_value >= 0:
+                            trigger_value = (event.value + 1) / 2
+                        elif event.axis == LT_AXIS and last_trigger_value <= 0:
+                            trigger_value = -(event.value + 1) / 2
+                        else:
+                            continue
+
+                        last_trigger_value = trigger_value
+
                     self.axis_moved.emit(event.axis, event.value)
             clock.tick(60)
 

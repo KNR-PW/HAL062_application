@@ -35,7 +35,9 @@ def build_standard_frame(frame_id: int, data: Sequence[int]) -> str:
     if not (0 <= frame_id <= 0xFF):
         raise ValueError(f"Frame ID poza zakresem uint8: {frame_id}")
     if len(data) > 8:
-        raise ValueError(f"Dane ramki nie mogą przekraczać 8 bajtów (otrzymano {len(data)})")
+        raise ValueError(
+            f"Dane ramki nie mogą przekraczać 8 bajtów (otrzymano {len(data)})"
+        )
 
     hex_payload = "".join(f"{byte & 0xFF:02X}" for byte in (frame_id, *data))
     frame = f"#{hex_payload}"
@@ -72,7 +74,9 @@ def build_wheel_frame(linear_x: float, angular_z: float) -> str:
 class TCPClient:
     """Klient TCP odpowiedzialny za utrzymanie połączenia z łazikiem i wymianę 19-znakowych ramek."""
 
-    def __init__(self, ip: str = DEFAULT_ROVER_IP, port: int = DEFAULT_ROVER_PORT) -> None:
+    def __init__(
+        self, ip: str = DEFAULT_ROVER_IP, port: int = DEFAULT_ROVER_PORT
+    ) -> None:
         self.ip = ip
         self.port = port
         self._sock: socket.socket | None = None
@@ -143,7 +147,7 @@ class TCPClient:
                 self.close()
                 return frames, True
             self._recv_buffer += chunk.decode("ascii", errors="ignore")
-        except (BlockingIOError, InterruptedError):
+        except BlockingIOError, InterruptedError:
             return frames, False
         except OSError:
             self.close()
@@ -159,8 +163,12 @@ class TCPClient:
                     self._recv_buffer = self._recv_buffer[start_pos:]
                 break
 
-            raw_frame = self._recv_buffer[start_pos : start_pos + COMMUNICATION_FRAME_SIZE]
-            self._recv_buffer = self._recv_buffer[start_pos + COMMUNICATION_FRAME_SIZE :]
+            raw_frame = self._recv_buffer[
+                start_pos : start_pos + COMMUNICATION_FRAME_SIZE
+            ]
+            self._recv_buffer = self._recv_buffer[
+                start_pos + COMMUNICATION_FRAME_SIZE :
+            ]
             try:
                 frame_id = int(raw_frame[1:3], 16)
                 payload = raw_frame[3:19]
@@ -209,7 +217,7 @@ class RoverConnectionService(QThread):
             if action == "speed":
                 # Oś spustu (RT, oś 5): spoczynkowo -1.0, pełne wciśnięcie +1.0
                 self._forward_speed = (value + 0.9) / 2.5 if value > -0.9 else 0.0
-                self._linear_x = self._forward_speed - self._reverse_speed
+                self._linear_x: float = self._forward_speed - self._reverse_speed
             elif action == "reverse":
                 # Oś lewego spustu (LT, oś 2): jazda wstecz
                 self._reverse_speed = (value + 0.9) / 2.5 if value > -0.9 else 0.0
@@ -244,11 +252,15 @@ class RoverConnectionService(QThread):
 
     @Slot()
     def init_light(self) -> None:
-        self._cmd_queue.put(build_standard_frame(FRAME_ID_LIGHT, [0, 0, 1, 1, 0, 0, 0, 0]))
+        self._cmd_queue.put(
+            build_standard_frame(FRAME_ID_LIGHT, [0, 0, 1, 1, 0, 0, 0, 0])
+        )
 
     @Slot()
     def init_engine(self) -> None:
-        self._cmd_queue.put(build_standard_frame(FRAME_ID_ENGINE_INIT, [1, 1, 1, 0, 0, 0, 0, 0]))
+        self._cmd_queue.put(
+            build_standard_frame(FRAME_ID_ENGINE_INIT, [1, 1, 1, 0, 0, 0, 0, 0])
+        )
 
     @Slot()
     def init_chassis(self) -> None:
@@ -302,7 +314,11 @@ class RoverConnectionService(QThread):
                 if tick_start >= next_connect_attempt:
                     err = self._client.connect()
                     if err is None:
-                        logger.info("Połączono z łazikiem (%s:%d)", self._client.ip, self._client.port)
+                        logger.info(
+                            "Połączono z łazikiem (%s:%d)",
+                            self._client.ip,
+                            self._client.port,
+                        )
                         logged_disconnect = False
                         self.connectionStatusChanged.emit(True)
                         if self._auto_init_chassis:
@@ -326,7 +342,9 @@ class RoverConnectionService(QThread):
                         break
                     err = self._client.send_message(queued_frame)
                     if err is not None:
-                        logger.warning("Utracono połączenie z łazikiem podczas wysyłki: %s", err)
+                        logger.warning(
+                            "Utracono połączenie z łazikiem podczas wysyłki: %s", err
+                        )
                         self.connectionStatusChanged.emit(False)
                         next_connect_attempt = time.monotonic() + RECONNECT_INTERVAL_SEC
                         break
@@ -348,7 +366,9 @@ class RoverConnectionService(QThread):
                 for frame_id, payload in received:
                     self.transmissionReceived.emit(frame_id, payload)
                 if disconnected:
-                    logger.warning("Połączenie z łazikiem zostało zamknięte przez zdalny host")
+                    logger.warning(
+                        "Połączenie z łazikiem zostało zamknięte przez zdalny host"
+                    )
                     self.connectionStatusChanged.emit(False)
                     next_connect_attempt = time.monotonic() + RECONNECT_INTERVAL_SEC
 
