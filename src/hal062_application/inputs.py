@@ -70,13 +70,14 @@ class InputManager(QObject):
 
     @Slot(int, float)
     def handle_gamepad_axis(self, axis_id, value):
-        # Left Stick X-axis
-        print(axis_id, value)
         if axis_id == 0:
-            if abs(value) > 0.15:  # Deadzone check
-                self.gamepadSignal.emit("move_x", value)
+            if abs(value) > 0.15:
+                self.gamepadSignal.emit("turn", value)
             else:
-                self.gamepadSignal.emit("move_x", 0.0)
+                self.gamepadSignal.emit("turn", 0)
+
+        elif axis_id == 5:
+            self.gamepadSignal.emit("speed", value)
 
 
 class GamepadWorker(QThread):
