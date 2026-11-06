@@ -5,6 +5,7 @@ from __future__ import annotations
 import signal
 import sys
 
+import connection
 import inputs
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QGuiApplication
@@ -21,13 +22,21 @@ if __name__ == "__main__":
     kb_filter = inputs.GlobalKeyboardFilter(input_manager)
     app.installEventFilter(kb_filter)
 
+    rover_connection = connection.RoverConnectionService()
+    input_manager.gamepadSignal.connect(rover_connection.handle_gamepad)
+    rover_connection.start()
+
     gamepad_thread = inputs.GamepadWorker()
     gamepad_thread.button_pressed.connect(input_manager.handle_gamepad_button)
     gamepad_thread.axis_moved.connect(input_manager.handle_gamepad_axis)
     gamepad_thread.start()
 
+    app.aboutToQuit.connect(gamepad_thread.stop)
+    app.aboutToQuit.connect(rover_connection.stop)
+
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("inputManager", input_manager)
+    engine.rootContext().setContextProperty("roverConnection", rover_connection)
     # Add the current directory to the import paths and load the main module.
     engine.addImportPath(sys.path[-1])
     engine.loadFromModule("Static", "Main")
