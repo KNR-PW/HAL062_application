@@ -3,18 +3,19 @@ services:
     build: .
     container_name: HAL062_application
     environment:
-      - WAYLAND_DISPLAY=${WAYLAND_DISPLAY}
-      - XDG_RUNTIME_DIR=/tmp/runtime-root
+      - DISPLAY=${DISPLAY:-:0}
+      - WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-wayland-0}
+      - XDG_RUNTIME_DIR=/tmp/runtime-dir
       - QT_QPA_PLATFORM=wayland;xcb  # Fallback to xcb if Wayland fails
+      - QT_X11_NO_MITSHM=1
     volumes:
-      # Code & venv setup
+      # Code setup
       - ./src:/app
-      - /app/.venv
-      
+
       # Mount Wayland IPC socket from host into container
-      - ${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}:/tmp/runtime-root/${WAYLAND_DISPLAY}
-      
-      # (Optional) Keep X11 mounted as fallback
-      - /tmp/.X11-unix:/tmp/.X11-unix:ro
-    user: "${UID}:${GID}"  # Required: Wayland checks socket ownership
+      - ${XDG_RUNTIME_DIR:-/run/user/1000}/${WAYLAND_DISPLAY:-wayland-0}:/tmp/runtime-dir/${WAYLAND_DISPLAY:-wayland-0}
+
+      # Keep X11 mounted as fallback
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    user: "${UID:-1000}:${GID:-1000}"  # Required: Wayland checks socket ownership
     network_mode: host
