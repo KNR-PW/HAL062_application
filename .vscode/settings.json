@@ -18,6 +18,7 @@
   "editor.tabCompletion": "on",
   "basedpyright.analysis.autoImportCompletions": true,
   "basedpyright.importStrategy": "useBundled",
+  "basedpyright.analysis.extraPaths": ["./src/hal062_application"],
   "qt-qml.qmlls.additionalImportPaths": [
     "${workspaceFolder}/.venv/lib/python3.14/site-packages/PySide6/Qt/qml"
   ]

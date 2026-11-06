@@ -14,8 +14,15 @@ services:
 
       # Mount Wayland IPC socket from host into container
       - ${XDG_RUNTIME_DIR:-/run/user/1000}/${WAYLAND_DISPLAY:-wayland-0}:/tmp/runtime-dir/${WAYLAND_DISPLAY:-wayland-0}
+      - /dev/input:/dev/input:ro
 
       # Keep X11 mounted as fallback
       - /tmp/.X11-unix:/tmp/.X11-unix
     user: "${UID:-1000}:${GID:-1000}"  # Required: Wayland checks socket ownership
     network_mode: host
+
+    devices:
+      - /dev/input:/dev/input
+      # Mount all input devices (gamepads, joysticks, event nodes)
+      # Grants container permission to access host input nodes
+    privileged: true
