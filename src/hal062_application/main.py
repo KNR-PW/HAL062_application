@@ -23,7 +23,7 @@ if __name__ == "__main__":
     kb_filter = inputs.GlobalKeyboardFilter(input_manager)
     app.installEventFilter(kb_filter)
 
-    rover_connection = connections.RoverTcpClient()
+    rover_connection = connections.TcpClient("127.0.0.1", 8888)
     # input_manager.gamepadSignal.connect(rover_connection.handle_gamepad)
     # rover_connection.start()
 
@@ -33,9 +33,16 @@ if __name__ == "__main__":
     gamepad_thread.gamepad_connected.connect(
         lambda state: setattr(input_manager.state, "gamepad_connected", state)
     )
+    gamepad_thread.gamepad_inactive.connect(
+        lambda state: setattr(input_manager.state, "gamepad_enabled", False)
+    )
+
     gamepad_thread.start()
 
-    roverLogic_thread = rover_logic.RoverLogic(connections.RoverAPI(), input_manager)
+    rover_api = connections.RoverAPI()
+    rover_api.commandSignal.connect(rover_connection.send_command)
+
+    roverLogic_thread = rover_logic.RoverLogic(rover_api, input_manager)
     input_manager.actionSignal.connect(roverLogic_thread.handle_action_signal)
     input_manager.gamepadSignal.connect(roverLogic_thread.handle_gamepad_signal)
 

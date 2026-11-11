@@ -53,6 +53,7 @@ class InputManager(QObject):
         MAIN_BACKWARD = auto()
         MAIN_LEFT = auto()
         MAIN_RIGHT = auto()
+        E_BRAKE = auto()
 
         TOGGLE_PAD = auto()
 
@@ -85,9 +86,10 @@ class InputManager(QObject):
             "A": self.InputAction.MAIN_LEFT,
             "D": self.InputAction.MAIN_RIGHT,
             "~": self.InputAction.TOGGLE_PAD,
+            " ": self.InputAction.E_BRAKE,
         }
 
-        self.analog_map = {
+        self.analog_maps = {
             0: self.InputAction.JOY_LS_X,
             1: self.InputAction.JOY_LS_Y,
             2: self.InputAction.JOY_RS_X,
@@ -131,13 +133,13 @@ class InputManager(QObject):
     @Slot(int)
     def handle_gamepad_button(self, button_id, state):
         action = self.gamepad_map.get(button_id)
-        if action is not None:
+        if action is not None and self._state.gamepad_enabled:
             self.actionSignal.emit(button_id, state)
 
     @Slot(int, float)
     def handle_gamepad_axis(self, axis_id, value):
         action = self.analog_map.get(axis_id)
-        if action is not None:
+        if action is not None and self._state.gamepad_enabled:
             self.actionSignal.emit(axis_id, value)
 
 
@@ -145,6 +147,7 @@ class GamepadWorker(QThread):
     button_pressed = Signal(int, bool)
     axis_moved = Signal(int, float)
     gamepad_connected = Signal(bool)
+    gamepad_inactive = Signal()
 
     def __init__(self):
         super().__init__()
@@ -155,6 +158,7 @@ class GamepadWorker(QThread):
         pygame.joystick.init()
         joystick = None
         clock = pygame.time.Clock()
+        disable_timer = 0
 
         while self._running:
             if joystick is None:
@@ -173,6 +177,7 @@ class GamepadWorker(QThread):
                 continue
 
             for event in pygame.event.get():
+                disable_timer = 0
                 if event.type == pygame.JOYDEVICEADDED and joystick is None:
                     joystick = pygame.joystick.Joystick(event.device_index)
 
@@ -185,6 +190,10 @@ class GamepadWorker(QThread):
                 elif event.type == pygame.JOYAXISMOTION:
                     self.axis_moved.emit(event.axis, event.value)
 
+            disable_timer += 1
+            if disable_timer > 30 * 60:
+                self.gamepad_inactive.emit()
+                disable_timer = 0
             clock.tick(60)
 
     def stop(self):
