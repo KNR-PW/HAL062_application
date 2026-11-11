@@ -1,11 +1,23 @@
 import os
-from enum import IntEnum, auto
+
+from PySide6.QtQmlFeatures import computed
 
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 
+from typing import TYPE_CHECKING, TypeVar
+
 import pygame
-from PySide6.QtCore import Property, QEnum, QEvent, QObject, QThread, Signal, Slot
-from PySide6.QtQmlFeatures import auto_properties
+from enums import ControlScheme, InputAction
+from PySide6.QtCore import QEvent, QObject, QThread, Signal, Slot
+
+if TYPE_CHECKING:
+    # 1. What Basedpyright sees (perfectly typed dummy decorator)
+    T = TypeVar("T")
+
+    def auto_properties[T](cls: type[T]) -> type[T]: ...
+else:
+    # 2. What Python actually runs at runtime
+    from PySide6.QtQmlFeatures import auto_properties
 
 
 class GlobalKeyboardFilter(QObject):
@@ -32,97 +44,82 @@ class GlobalKeyboardFilter(QObject):
 
 @auto_properties
 class InputState(QObject):
-    class ControlScheme(IntEnum):
-        DISABLED = 0
-        CHASIS = auto()
-        MANIPULATOR = auto()
-
-    QEnum(ControlScheme)
+    gamepad_connectedChanged = Signal()
+    gamepad_enabledChanged = Signal()
+    control_schemeChanged = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
         self.gamepad_connected = False
         self.gamepad_enabled = True
-        self.control_scheme = self.ControlScheme.CHASIS
+        self.control_scheme = ControlScheme.DISABLED
+
+    @computed("control_scheme")
+    def control_scheme_name(self) -> str:
+        return self.control_scheme.name.capitalize()
 
 
 class InputManager(QObject):
-    class InputAction(IntEnum):
-        MAIN_FORWARD = 0
-        MAIN_BACKWARD = auto()
-        MAIN_LEFT = auto()
-        MAIN_RIGHT = auto()
-        E_BRAKE = auto()
-
-        TOGGLE_PAD = auto()
-
-        JOY_LS_X = auto()
-        JOY_LS_Y = auto()
-        JOY_RS_X = auto()
-        JOY_RS_Y = auto()
-        JOY_LT = auto()
-        JOY_RT = auto()
-        JOY_A = auto()
-        JOY_B = auto()
-        JOY_X = auto()
-        JOY_Y = auto()
-        JOY_LB = auto()
-        JOY_RB = auto()
-        JOY_BB = auto()
-        JOY_SB = auto()
-
     actionSignal = Signal(InputAction, bool)
     gamepadSignal = Signal(InputAction, float)
-    QEnum(InputAction)
 
-    def __init__(self):
+    def __init__(self, input_state: InputState):
         super().__init__()
-        self._state = InputState()  # pyright: ignore[reportCallIssue]
+        self.input_state = input_state
 
         self.keyboard_map = {
-            "W": self.InputAction.MAIN_FORWARD,
-            "S": self.InputAction.MAIN_BACKWARD,
-            "A": self.InputAction.MAIN_LEFT,
-            "D": self.InputAction.MAIN_RIGHT,
-            "~": self.InputAction.TOGGLE_PAD,
-            " ": self.InputAction.E_BRAKE,
+            "W": InputAction.MAIN_FORWARD,
+            "S": InputAction.MAIN_BACKWARD,
+            "A": InputAction.MAIN_LEFT,
+            "D": InputAction.MAIN_RIGHT,
+            "~": InputAction.TOGGLE_PAD,
+            "1": InputAction.CS_NONE,
+            "2": InputAction.CS_CHASIS,
+            "3": InputAction.CS_MAINPULATOR,
+            " ": InputAction.E_BRAKE,
         }
 
-        self.analog_maps = {
-            0: self.InputAction.JOY_LS_X,
-            1: self.InputAction.JOY_LS_Y,
-            2: self.InputAction.JOY_RS_X,
-            3: self.InputAction.JOY_RS_Y,
-            4: self.InputAction.JOY_LT,
-            5: self.InputAction.JOY_RT,
+        self.analog_map = {
+            0: InputAction.JOY_LS_X,
+            1: InputAction.JOY_LS_Y,
+            2: InputAction.JOY_RS_X,
+            3: InputAction.JOY_RS_Y,
+            4: InputAction.JOY_LT,
+            5: InputAction.JOY_RT,
         }
 
         self.gamepad_map = {
-            0: self.InputAction.JOY_A,
-            1: self.InputAction.JOY_B,
-            2: self.InputAction.JOY_X,
-            3: self.InputAction.JOY_Y,
-            4: self.InputAction.JOY_LB,
-            5: self.InputAction.JOY_RB,
-            6: self.InputAction.JOY_BB,
-            7: self.InputAction.JOY_SB,
+            0: InputAction.JOY_A,
+            1: InputAction.JOY_B,
+            2: InputAction.JOY_X,
+            3: InputAction.JOY_Y,
+            4: InputAction.JOY_LB,
+            5: InputAction.JOY_RB,
+            6: InputAction.JOY_BB,
+            7: InputAction.JOY_SB,
         }
-
-    @Property(QObject, constant=True)
-    def state(self):
-        return self._state
 
     # --- RAW INPUT RECEIVERS ---
     @Slot(str)
     def handle_key_press(self, key_name):
         action = self.keyboard_map.get(key_name)
-        if action == self.InputAction.TOGGLE_PAD:
-            self._state.gamepad_enabled = not self._state.gamepad_enabled
+        if action is None:
             return
 
-        if action is not None:
-            self.actionSignal.emit(action, True)
+        if action == InputAction.TOGGLE_PAD:
+            self.input_state.gamepad_enabled = not self.input_state.gamepad_enabled
+
+        elif action == InputAction.CS_NONE:
+            self.input_state.control_scheme = ControlScheme.DISABLED
+
+        elif action == InputAction.CS_CHASIS:
+            self.input_state.control_scheme = ControlScheme.CHASIS
+
+        elif action == InputAction.CS_MAINPULATOR:
+            self.input_state.control_scheme = ControlScheme.MANIPULATOR
+
+        self.actionSignal.emit(action, True)
 
     @Slot(str)
     def handle_key_release(self, key_name):
@@ -133,13 +130,13 @@ class InputManager(QObject):
     @Slot(int)
     def handle_gamepad_button(self, button_id, state):
         action = self.gamepad_map.get(button_id)
-        if action is not None and self._state.gamepad_enabled:
+        if action is not None and self.input_state.gamepad_enabled:
             self.actionSignal.emit(button_id, state)
 
     @Slot(int, float)
     def handle_gamepad_axis(self, axis_id, value):
         action = self.analog_map.get(axis_id)
-        if action is not None and self._state.gamepad_enabled:
+        if action is not None and self.input_state.gamepad_enabled:
             self.actionSignal.emit(axis_id, value)
 
 

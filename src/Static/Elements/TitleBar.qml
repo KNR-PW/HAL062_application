@@ -1,23 +1,15 @@
 import QtQuick
 import QtQuick.Layouts
+import com.halapp.enums
 
 Rectangle {
-
-
     Layout.preferredHeight: 25
     Layout.fillWidth: true
-    color: inputManager.state.gamepad_enabled ? '#ab6868' : '#981313'
+    color: inputState.gamepad_enabled ? '#ab6868' : '#981313'
 
-    // RowLayout {
-    //     anchors.fill: parent
-    //     spacing: 0
-
-    //     Item {
-    //         Layout.fillWidth: true
-    //     }
-
-
-    // }
+    Text {
+        text: "Control scheme: " + inputState.control_scheme_name
+    }
 
     
 }
