@@ -79,7 +79,7 @@ class RoverLogic(QThread):
     def _calculate_gamepad_speed(self):
         lt_value = self.gamepad[InputAction.JOY_LT]
         rt_value = self.gamepad[InputAction.JOY_RT]
-        joy_ls_x_value: float = self.gamepad[InputAction.JOY_LS_X]
+        joy_ls_x_value = -self.gamepad[InputAction.JOY_LS_X]
 
         if lt_value > 0 and rt_value > 0:  # e-brake on screenshot
             print("e-brake triggered")
@@ -91,7 +91,7 @@ class RoverLogic(QThread):
         return [spd_lin, spd_ang]
 
     def _calculate_wasd_speed(self):
-        ACCELERATION_STEP = 0.1  # Replaces / 10
+        ACCELERATION_STEP = 0.05  # Replaces / 10
         TURN_SCALAR = 1 / 6  # Replaces / 6
         MAX_SPEED = 1.0
 
