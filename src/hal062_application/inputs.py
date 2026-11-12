@@ -83,9 +83,9 @@ class InputManager(QObject):
         self.analog_map = {
             0: InputAction.JOY_LS_X,
             1: InputAction.JOY_LS_Y,
-            2: InputAction.JOY_RS_X,
-            3: InputAction.JOY_RS_Y,
-            4: InputAction.JOY_LT,
+            3: InputAction.JOY_RS_X,
+            4: InputAction.JOY_RS_Y,
+            2: InputAction.JOY_LT,
             5: InputAction.JOY_RT,
         }
 
@@ -131,13 +131,13 @@ class InputManager(QObject):
     def handle_gamepad_button(self, button_id, state):
         action = self.gamepad_map.get(button_id)
         if action is not None and self.input_state.gamepad_enabled:
-            self.actionSignal.emit(button_id, state)
+            self.actionSignal.emit(action, state)
 
     @Slot(int, float)
     def handle_gamepad_axis(self, axis_id, value):
         action = self.analog_map.get(axis_id)
         if action is not None and self.input_state.gamepad_enabled:
-            self.actionSignal.emit(axis_id, value)
+            self.gamepadSignal.emit(action, value)
 
 
 class GamepadWorker(QThread):
@@ -159,6 +159,7 @@ class GamepadWorker(QThread):
 
         while self._running:
             if joystick is None:
+                print("trying to connect gamepad")
                 if pygame.joystick.get_count() > 0:
                     joystick = pygame.joystick.Joystick(0)
                     self.gamepad_connected.emit(True)

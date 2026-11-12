@@ -3,7 +3,7 @@ from typing import Any
 
 from connections import RoverAPI
 from enums import ControlScheme, InputAction
-from inputs import InputManager, InputState
+from inputs import InputState
 from PySide6.QtCore import QThread, Signal, Slot
 
 ROVER_WIDTH = 0.91
@@ -16,13 +16,11 @@ class RoverLogic(QThread):
     def __init__(
         self,
         api: RoverAPI,
-        input_manager: InputManager,
         input_state: InputState,
         parent=None,
     ):
         super().__init__(parent)
         self.api = api
-        self.input_manager = input_manager
         self.state = input_state
         self._is_running = True
         self.enable: Any = self.state.control_scheme == ControlScheme.CHASIS
@@ -46,11 +44,11 @@ class RoverLogic(QThread):
 
         self.gamepad = {
             InputAction.JOY_LT: 0.0,
-            InputAction.JOY_RT: 1.0,
-            InputAction.JOY_LS_X: 1.0,
+            InputAction.JOY_RT: 0.0,
+            InputAction.JOY_LS_X: 0.0,
         }
 
-    @Slot(str, bool)
+    @Slot(InputAction, bool)
     def handle_action_signal(self, action, state):
         if action not in self.keys:
             return
@@ -58,14 +56,13 @@ class RoverLogic(QThread):
         if not state:
             self.sticky_keys[action] = False
 
-    @Slot(str, float)
+    @Slot(InputAction, float)
     def handle_gamepad_signal(self, axis, value):
-        self.gamepad_dissconect_timer = 0
         if axis in (InputAction.JOY_RT, InputAction.JOY_LT):
             self.gamepad[axis] = (1 + value) / 2
 
         elif axis == InputAction.JOY_LS_X:
-            self.gamepad[axis] = value if value > 0.10 else 0.0
+            self.gamepad[axis] = value if abs(value) > 0.10 else 0.0
 
     @Slot()
     def handle_state_signal(self):
@@ -166,6 +163,8 @@ class RoverLogic(QThread):
 
             self.speedSignal.emit(self.speed_l, self.speed_r)
             self.api.set_speed(self.speed_l, self.speed_r)
+
+            print(self.speed_l, self.speed_r)
 
             self.msleep(50)
 

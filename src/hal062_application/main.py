@@ -37,7 +37,7 @@ if __name__ == "__main__":
     rover_api = connections.RoverAPI()
     rover_api.commandSignal.connect(rover_connection.send_command)
 
-    roverLogic_thread = rover_logic.RoverLogic(rover_api, input_manager, input_state)
+    roverLogic_thread = rover_logic.RoverLogic(rover_api, input_state)
     input_manager.actionSignal.connect(roverLogic_thread.handle_action_signal)
     input_manager.gamepadSignal.connect(roverLogic_thread.handle_gamepad_signal)
 
