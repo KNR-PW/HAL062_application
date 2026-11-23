@@ -30,7 +30,7 @@ class TcpClient(QObject):
     @Slot(int, list)
     def send_command(self, can_id: int, command: list[int]):
         if self.socket.state() == QAbstractSocket.SocketState.ConnectedState:
-            message = f"#{can_id:02X}{''.join(f'{b:02X}' for b in command)}"
+            message = f"{can_id:03}#{''.join(f'{b:02X}' for b in command)}\n"
             self.socket.write(message.encode("utf-8"))
             self.socket.flush()
 
